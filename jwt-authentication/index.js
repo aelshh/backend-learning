@@ -6,11 +6,11 @@ const value = {
   fname: "Rakesh",
   accNum: 2341243213141,
 };
-
+    
 const token = jwt.sign(value, secret);
 console.log(token);
 
 const verfiy = jwt.verify(token, secret);
-const verfiy2 = jwt.verify(token, "someanotherrandomsecreat");
+// const verfiy2 = jwt.verify(token, "someanotherrandomsecreat");
 
 console.log(verfiy);
