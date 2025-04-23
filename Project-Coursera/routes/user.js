@@ -1,11 +1,12 @@
 const { Router } = require("express");
-const { userModel } = require("../db");
+const { userModel, purchaseModel, courseModel } = require("../db");
 const express = require("express");
 const { z } = require("zod");
 const app = express();
 const bcrypt = require("bcrypt");
 const jwt = require("jsonwebtoken");
 require("dotenv").config();
+const { userAuth } = require("../middlewares/userAuth");
 const JWT_USER_SECRET = process.env.JWT_USER_SECRET;
 
 const userRouter = Router();
@@ -146,9 +147,23 @@ userRouter.post("/signin", async (req, res) => {
     });
   }
 });
-userRouter.get("/purchases", (req, res) => {
+userRouter.get("/purchases", userAuth, async (req, res) => {
+  const userId = req.id;
+  const purchases = await purchaseModel.find({
+    userId: userId,
+  });
+
+  let purchasesId = [];
+  purchases.map((purchase) => {
+    purchasesId.push(purchase.courseId);
+  });
+
+  const purchasedCourses = await courseModel.find({
+    _id: { $in: purchasesId },
+  });
+
   res.json({
-    message: "this is purchase route working fine",
+    purchasedCourses,
   });
 });
 
