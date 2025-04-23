@@ -5,7 +5,7 @@ const { userRouter } = require("./routes/user");
 const { courseRouter } = require("./routes/course");
 const { adminRouter } = require("./routes/admin");
 const cookieParser = require("cookie-parser");
-const rateLimit = require("express-rate-limit");
+
 require("dotenv").config();
 
 app.use(express.json());

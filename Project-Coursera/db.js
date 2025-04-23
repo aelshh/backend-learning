@@ -1,7 +1,7 @@
 const mongoose = require("mongoose");
 const Schema = mongoose.Schema;
 const ObjectId = Schema.ObjectId;
-require("dotenv").config();
+
 console.log("create db");
 
 const user = new Schema({
