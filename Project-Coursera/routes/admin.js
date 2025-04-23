@@ -8,12 +8,14 @@ const jwt = require("jsonwebtoken");
 require("dotenv").config();
 const JWT_ADMIN_SECRET = process.env.JWT_ADMIN_SECRET;
 const { adminAuth } = require("../middlewares/adminAuth");
+const cookieParser = require("cookie-parser");
+const { rateLimiter } = require("../middlewares/rateLimiter");
 
 app.use(express.json());
 
 const adminRouter = Router();
 
-adminRouter.post("/signup", async function (req, res) {
+adminRouter.post("/signup", rateLimiter, async function (req, res) {
   const requiredBody = z.object({
     email: z.string().max(100).email(),
     password: z
@@ -86,7 +88,7 @@ adminRouter.post("/signup", async function (req, res) {
   }
 });
 
-adminRouter.post("/signin", async (req, res) => {
+adminRouter.post("/signin", rateLimiter, async (req, res) => {
   const requiredBody = z.object({
     email: z.string().max(100).email(),
     password: z
@@ -138,11 +140,16 @@ adminRouter.post("/signin", async (req, res) => {
     JWT_ADMIN_SECRET
   );
 
+  res.cookie("token", token, {
+    httpOnly: true,
+    credentials: "include",
+    maxAge: 24 * 60 * 60 * 1000,
+  });
+
   const passMatch = await bcrypt.compare(password, admin.password);
   if (passMatch) {
     res.json({
       message: "You are signed in",
-      token: token,
     });
   } else {
     res.json({

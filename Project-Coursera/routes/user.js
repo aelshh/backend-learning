@@ -7,11 +7,13 @@ const bcrypt = require("bcrypt");
 const jwt = require("jsonwebtoken");
 require("dotenv").config();
 const { userAuth } = require("../middlewares/userAuth");
+const { rateLimiter } = require("../middlewares/rateLimiter");
+
 const JWT_USER_SECRET = process.env.JWT_USER_SECRET;
 
 const userRouter = Router();
 
-userRouter.post("/signup", async (req, res) => {
+userRouter.post("/signup", rateLimiter, async (req, res) => {
   const requiredBody = z.object({
     email: z.string().max(100).email(),
     password: z
@@ -83,7 +85,7 @@ userRouter.post("/signup", async (req, res) => {
     });
   }
 });
-userRouter.post("/signin", async (req, res) => {
+userRouter.post("/signin", rateLimiter, async (req, res) => {
   const requiredBody = z.object({
     email: z.string().max(100).email(),
     password: z
@@ -128,18 +130,22 @@ userRouter.post("/signin", async (req, res) => {
     return;
   }
 
+  const passMatch = await bcrypt.compare(password, user.password);
   let token = jwt.sign(
     {
       id: user._id,
     },
     JWT_USER_SECRET
   );
+  res.cookie("token", token, {
+    httpOnly: true,
+    maxAge: 24 * 60 * 60 * 1000,
+    credentials: "include",
+  });
 
-  const passMatch = await bcrypt.compare(password, user.password);
   if (passMatch) {
     res.json({
       message: "You are signed in",
-      token: token,
     });
   } else {
     res.json({

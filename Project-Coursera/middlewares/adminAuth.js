@@ -3,7 +3,7 @@ const jwt = require("jsonwebtoken");
 
 function adminAuth(req, res, next) {
   const JWT_ADMIN_SECRET = process.env.JWT_ADMIN_SECRET;
-  const token = req.headers.token;
+  const token = req.cookies.token;
   try {
     const response = jwt.verify(token, JWT_ADMIN_SECRET);
     req.id = response.id;
