@@ -1,11 +1,13 @@
 const { Router } = require("express");
-const { adminModel } = require("../db");
+const { adminModel, courseModel } = require("../db");
 const express = require("express");
 const { z } = require("zod");
 const app = express();
 const bcrypt = require("bcrypt");
 const jwt = require("jsonwebtoken");
-const JWT_ADMIN_SECRET = "239dh302h!";
+require("dotenv").config();
+const JWT_ADMIN_SECRET = process.env.JWT_ADMIN_SECRET;
+const { adminAuth } = require("../middlewares/adminAuth");
 
 app.use(express.json());
 
@@ -49,13 +51,13 @@ adminRouter.post("/signup", async function (req, res) {
   let firstName = req.body.firstName;
   let lastName = req.body.lastName;
 
-  const existingUser = await adminModel.findOne({
+  const existingadmin = await adminModel.findOne({
     email: email,
   });
 
-  if (existingUser) {
+  if (existingadmin) {
     res.json({
-      message: "User already exists ",
+      message: "admin already exists ",
     });
     return;
   }
@@ -118,25 +120,25 @@ adminRouter.post("/signin", async (req, res) => {
   let email = req.body.email;
   let password = req.body.password;
 
-  let user = await adminModel.findOne({
+  let admin = await adminModel.findOne({
     email: email,
   });
 
-  let token = jwt.sign(
-    {
-      id: user._id,
-    },
-    JWT_ADMIN_SECRET
-  );
-
-  if (!user) {
+  if (!admin) {
     res.json({
-      message: "No such user found",
+      message: "No such admin found",
     });
     return;
   }
 
-  const passMatch = await bcrypt.compare(password, user.password);
+  let token = jwt.sign(
+    {
+      id: admin._id,
+    },
+    JWT_ADMIN_SECRET
+  );
+
+  const passMatch = await bcrypt.compare(password, admin.password);
   if (passMatch) {
     res.json({
       message: "You are signed in",
@@ -148,19 +150,115 @@ adminRouter.post("/signin", async (req, res) => {
     });
   }
 });
-adminRouter.post("/course", (req, res) => {
+adminRouter.post("/course", adminAuth, async (req, res) => {
+  const requiredBody = z.object({
+    title: z.string(),
+    description: z.string(),
+    price: z.number(),
+    imgUrl: z.string(),
+  });
+
+  const parsedDataWithSuccess = requiredBody.safeParse(req.body);
+
+  if (!parsedDataWithSuccess.success) {
+    res.json({
+      message: "Invalid Input",
+      error: parsedDataWithSuccess.error,
+    });
+    return;
+  }
+  let title = req.body.title;
+  let description = req.body.description;
+  let price = req.body.price;
+  let imgUrl = req.body.imgUrl;
+  let creatorId = req.id;
+
+  const doesCourseExists = await courseModel.findOne({
+    title: title,
+    description: description,
+  });
+
+  if (doesCourseExists) {
+    res.json({
+      message: "Course already exists",
+    });
+    return;
+  }
+
+  let course = await courseModel.create({
+    title: title,
+    description: description,
+    price: price,
+    imgUrl: imgUrl,
+    creatorId: creatorId,
+  });
+
   res.json({
-    message: "some message",
+    message: "Created course succesfully",
+    courseId: course.id,
   });
 });
-adminRouter.put("/course", (req, res) => {
+adminRouter.put("/course", adminAuth, async (req, res) => {
+  const requiredBody = z.object({
+    title: z.string(),
+    description: z.string(),
+    price: z.number(),
+    imgUrl: z.string(),
+  });
+
+  const parsedDataWithSuccess = requiredBody.safeParse(req.body);
+
+  if (!parsedDataWithSuccess.success) {
+    res.json({
+      message: "Invalid Input",
+      error: parsedDataWithSuccess.error,
+    });
+    return;
+  }
+  let title = req.body.title;
+  let description = req.body.description;
+  let price = req.body.price;
+  let imgUrl = req.body.imgUrl;
+  let creatorId = req.id;
+  let courseId = req.body.courseId;
+
+  const doesCourseExists = await courseModel.findOne({
+    _id: courseId,
+    creatorId: creatorId,
+  });
+
+  if (!doesCourseExists) {
+    res.json({
+      message: "Course does not exists",
+    });
+    return;
+  }
+
+  await courseModel.updateOne(
+    {
+      _id: courseId,
+    },
+    {
+      title: title,
+      description: description,
+      price: price,
+      imgUrl: imgUrl,
+      creatorId: creatorId,
+    }
+  );
+
   res.json({
-    message: "some message",
+    message: "Updated course succesfully",
   });
 });
-adminRouter.get("/course/bulk", (req, res) => {
+adminRouter.get("/course/bulk", adminAuth, async (req, res) => {
+  let adminId = req.id;
+  const response = await courseModel.find({
+    creatorId: adminId,
+  });
+
   res.json({
-    message: "some message",
+    response,
   });
 });
 
